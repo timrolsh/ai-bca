@@ -68,11 +68,23 @@ class SlidePuzzleState(StateNode):
         The number 0 represents the blank tile. 
         """
         with open(filename, 'r') as file:
-            # TODO read file and return an initial SlidePuzzleState.
-            # This return statement is just a dummy.
+            # read file and return an initial SlidePuzzleState
+
+            data = file.read().splitlines()
+            n = int(data[0])
+            tiles = []
+            for i in range(1, n + 1):
+                tiles.append(tuple(int(x) for x in data[i].split()))
+            tiles = tuple(tiles)
+            empty_pos = Coordinate(0, 0)
+            for i in range(n):
+                for j in range(n):
+                    if tiles[i][j] == 0:
+                        empty_pos = Coordinate(i, j)
+
             return SlidePuzzleState(
-                tiles=((0,),),  # tuple of tuple of 0, dummy value
-                empty_pos=Coordinate(0, 0),  # dummy value
+                tiles=tiles,
+                empty_pos=empty_pos,
                 parent=None,
                 last_action=None,
                 depth=0,
@@ -150,8 +162,16 @@ class SlidePuzzleState(StateNode):
         The goal of the slide puzzle is to have the empty spot in the 0th row and 0th col,
         and then the rest of the numbered tiles in order down the rows!
         """
-        # TODO implement!
-        return False
+        size = self.get_size()
+        for r in range(size):
+            for c in range(size):
+                if r == 0 and c == 0:
+                    if self.tiles[r][c] != 0:
+                        return False
+                else:
+                    if self.tiles[r][c] != r * size + c:
+                        return False
+        return True
 
     # Override
     def is_legal_action(self, action: SlidePuzzleAction) -> bool:
@@ -162,20 +182,24 @@ class SlidePuzzleState(StateNode):
 
         Actions are Coordinate objects, specifying the position of the tile that
         is to be moved into the empty slot. That Coordinate needs to be not out of bounds, and 
-        actually adjacent to the emty slot.
+        actually adjacent to the empty slot.
         """
-        # TODO implement!
-        return False
+        in_valid_row = 0 <= action.row < self.get_size()
+        in_valid_col = 0 <= action.col < self.get_size()
+        is_adjacent = abs(action.row - self.empty_pos.row) + abs(action.col - self.empty_pos.col) == 1
+        return in_valid_row and in_valid_col and is_adjacent
 
     # Override
 
     def get_all_actions(self) -> Iterable[SlidePuzzleAction]:
         """Return all legal actions at this state."""
-        # TODO implement! This is a good candidate for using yield (generator function)
-        yield from ()
-        # alternatively, return a list, tuple, or use comprehension
-        return []
-
+        # return a list, tuple, or use comprehension
+        return [
+            Coordinate(r, c)
+            for r in range(self.get_size())
+            for c in range(self.get_size())
+            if self.is_legal_action(Coordinate(r, c))
+        ]
     # Override
 
     def describe_last_action(self) -> str:
@@ -197,7 +221,22 @@ class SlidePuzzleState(StateNode):
 
         -- action is assumed legal (is_legal_action called before), but a ValueError may be passed for illegal actions if desired.
         """
-       # TODO implement! Remember that this returns a NEW state, and doesn't change this one.
-        return self
+        size = self.get_size()
+        new_tiles = [[0] * size for _ in range(size)]
+        for r in range(size):
+            for c in range(size):
+                new_tiles[r][c] = self.tiles[r][c]
+        
+        new_tiles[self.empty_pos.row][self.empty_pos.col] = self.tiles[action.row][action.col]
+        new_tiles[action.row][action.col] = 0
+        
+        return SlidePuzzleState(
+            tiles=tuple(tuple(row) for row in new_tiles),
+            empty_pos=action,
+            parent=self,
+            last_action=action,
+            depth=self.depth + 1,
+            path_cost=self.path_cost + 1,
+        )
 
     """ You may add additional methods that may be useful! """
