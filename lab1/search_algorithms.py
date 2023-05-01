@@ -1,5 +1,5 @@
 # Lab 1 (Part 1a and 2a)
-# Name(s): Tim Rolshud, Krish Arora
+# Name(s): Timothy Rolshud, Krish Arora
 
 from __future__ import annotations
 from typing import List, Collection, Tuple, Callable, Optional, Union, Set, Dict, Type, Iterable
@@ -274,7 +274,6 @@ class GraphSearchAlgorithm(GoalSearchAgent):
                     self.enqueue(next_state, cutoff)
                     self.total_enqueues += 1
                     ext_filter.add(next_state)
-                    gui_callback_fn(next_state)
                     extended = True
             if extended:
                 self.total_extends += 1
@@ -318,17 +317,19 @@ class GreedyBestSearch(InformedSearchAgent):
         of the remaining cost to goal. 
         """
         super().__init__(heuristic)
-        # TODO initiate frontier data structure
+        self.frontier = []
 
     def enqueue(self, state: StateNode, cutoff: Union[int, float] = INF):
         """ Add the state to the frontier, unless path COST exceeds the cutoff """
-        # TODO
-        raise NotImplementedError
+        if state.path_cost < cutoff:
+            heapq.heappush(self.frontier, (self.heuristic(state), state))
 
     def dequeue(self) -> Tuple[float, StateNode]:
         """  Choose and remove the state with LOWEST ESTIMATED REMAINING COST TO GOAL from the frontier."""
-        # TODO
-        raise NotImplementedError
+        if len(self.frontier) > 0:
+            return heapq.heappop(self.frontier)[1]
+        else:
+            return None
 
 
 class AStarSearch(InformedSearchAgent):
@@ -347,17 +348,20 @@ class AStarSearch(InformedSearchAgent):
         of remaining path cost. 
         """
         super().__init__(heuristic, *args, **kwargs)
-        # TODO initiate frontier data structure
+        self.frontier = []
 
     def enqueue(self, state: StateNode, cutoff: Union[int, float] = INF):
         """ Add the state to the frontier, unless path COST exceeds the cutoff """
-       # TODO
-        raise NotImplementedError
+        if state.path_cost < cutoff:
+            heapq.heappush(self.frontier, (state.path_cost +
+                                           self.heuristic(state), state))
 
     def dequeue(self) -> StateNode:
         """  Choose, remove, and return the state with LOWEST ESTIMATED TOTAL PATH COST from the frontier."""
-        # TODO
-        raise NotImplementedError
+        if len(self.frontier) > 0:
+            return heapq.heappop(self.frontier)[1]
+        else:
+            return None
 
 
 """ Informed search algorithms can be reconfigured to provide a "closest" answer
@@ -365,7 +369,7 @@ if . This often happens because of early termination (by max length/cost cutoff 
 
 The change is simple: during search, keep track of the state/path that is closest to the goal, 
 according to the cost heuristic, and return it if the search ultimately fails/terminates early.
- 
+
 This is sometimes known as an "anytime" algorithm, because the algorithm can have at least
 *some* useful result anytime the agent needs one.
 """
@@ -387,14 +391,40 @@ class AnytimeSearchAlgorithm(InformedSearchAgent):
                gui_callback_fn: Callable[[StateNode], bool] = lambda n: False,
                cutoff: Union[int, float] = INF
                ) -> Optional[StateNode]:
-        """ Perform an "Anytime" search from the initial_state
+        # Create an empty extended state filter
+        ext_filter: Set[StateNode] = set()
 
-        This is the same as a graph search, but even if the search fails to find a solution, 
-        it should always return the lowest-cost StateNode path  to the state closest* to the solution found so far.
-        *Closest according to the agent's heuristic.
-        """
-        # TODO implement! (You may start by copying your GraphSearch's code)
-        return None
+        self.enqueue(initial_state)
+        lowest_cost: float = INF
+        lowest_cost_state: StateNode = initial_state
+        # self.frontier will return true if it is not empty
+        while self.frontier:
+            current_node: StateNode = self.dequeue()
+            if current_node is None:
+                continue
+            if self.heuristic(current_node) < self.heuristic(lowest_cost_state):
+                lowest_cost = current_node.path_cost
+                lowest_cost_state = current_node
+            if self.heuristic(current_node) == self.heuristic(lowest_cost_state):
+                if current_node.path_cost < lowest_cost:
+                    lowest_cost = current_node.path_cost
+                    lowest_cost_state = current_node
+            if current_node.is_goal_state():
+                return current_node
+            if gui_callback_fn(current_node):
+                return lowest_cost_state
+            extended: bool = False
+            for action in current_node.get_all_actions():
+                # if running this action causes you to backtrack, don't add it
+                next_state: StateNode = current_node.get_next_state(action)
+                if next_state != current_node.parent and next_state not in ext_filter:
+                    self.enqueue(next_state, cutoff)
+                    self.total_enqueues += 1
+                    ext_filter.add(next_state)
+                    extended = True
+            if extended:
+                self.total_extends += 1
+        return lowest_cost_state
 
 
 # Collection of all the above. If you write other ones, add them here.
@@ -430,10 +460,10 @@ for alg in ALGORITHMS:
 
 
 """ A) Investigate a way to determine if a given slide puzzle is solvable without exhausting the whole state space.
- You may want to research the concept of parity. Implement is_solvable and make sure that it returns True on all the
- solvable test boards while returning False on the unsolvable ones.
- Write a script to open and test different slide puzzle boards.
- """
+You may want to research the concept of parity. Implement is_solvable and make sure that it returns True on all the
+solvable test boards while returning False on the unsolvable ones.
+Write a script to open and test different slide puzzle boards.
+"""
 
 # from slidepuzzle_problem import SlidePuzzleState
 # def is_solvable(board : SlidePuzzleState):
