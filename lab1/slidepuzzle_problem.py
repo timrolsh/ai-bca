@@ -186,7 +186,8 @@ class SlidePuzzleState(StateNode):
         """
         in_valid_row = 0 <= action.row < self.get_size()
         in_valid_col = 0 <= action.col < self.get_size()
-        is_adjacent = abs(action.row - self.empty_pos.row) + abs(action.col - self.empty_pos.col) == 1
+        is_adjacent = abs(action.row - self.empty_pos.row) + \
+            abs(action.col - self.empty_pos.col) == 1
         return in_valid_row and in_valid_col and is_adjacent
 
     # Override
@@ -226,10 +227,10 @@ class SlidePuzzleState(StateNode):
         for r in range(size):
             for c in range(size):
                 new_tiles[r][c] = self.tiles[r][c]
-        
+
         new_tiles[self.empty_pos.row][self.empty_pos.col] = self.tiles[action.row][action.col]
         new_tiles[action.row][action.col] = 0
-        
+
         return SlidePuzzleState(
             tiles=tuple(tuple(row) for row in new_tiles),
             empty_pos=action,
